@@ -2,5 +2,5 @@ include LICENSE
 include MANIFEST.in
 include README
 include README.rst
-recursive-include qubit *.py
-prune qubit/*.pyc
+recursive-include djqubit *.py
+prune djqubit/*.pyc
