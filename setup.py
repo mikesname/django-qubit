@@ -17,13 +17,13 @@ except ImportError:
 from distutils.command.install_data import install_data
 from distutils.command.install import INSTALL_SCHEMES
 
-import qubit as distmeta
+import djqubit as distmeta
 
 packages, data_files = [], []
 root_dir = os.path.dirname(__file__)
 if root_dir != '':
     os.chdir(root_dir)
-src_dir = "qubit"
+src_dir = "djqubit"
 
 
 def osx_install_data(install_data):
