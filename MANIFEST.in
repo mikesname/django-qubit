@@ -1,0 +1,6 @@
+include LICENSE
+include MANIFEST.in
+include README
+include README.rst
+recursive-include qubit *.py
+prune qubit/*.pyc
