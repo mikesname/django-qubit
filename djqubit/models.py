@@ -221,3 +221,37 @@ class EventI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
+class Function(models.Model, I18NMixin):
+    """Function class."""
+    class Meta:
+        db_table = "function"
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    type = models.ForeignKey(Term, null=True, related_name="+")
+    parent = models.ForeignKey(Actor, null=True)
+    description_status = models.ForeignKey(Term, null=True, related_name="+")
+    description_detail = models.ForeignKey(Term, null=True, related_name="+")
+    description_identifier = models.CharField(max_length=255, null=True)
+    source_standard = models.CharField(max_length=255, null=True)
+    lft = models.IntegerField()
+    rgt = models.IntegerField()
+    source_culture = models.CharField(max_length=25)    
+
+class FunctionI18N(models.Model):
+    """Function i18n data."""
+    class Meta:
+        db_table = "function_i18n"
+    id = models.ForeignKey(Function, primary_key=True, db_column="id", related_name="i18n")
+    authorized_form_of_name = models.CharField(max_length=255, null=True)
+    classification = models.CharField(max_length=255, null=True)
+    dates = models.CharField(max_length=255, null=True)
+    description = models.TextField(null=True)
+    history = models.TextField(null=True)
+    legislation = models.TextField(null=True)
+    institution_identifier = models.TextField(null=True)
+    revision_history = models.TextField(null=True)
+    rules = models.TextField(null=True)
+    sources = models.TextField(null=True)
+    culture = models.CharField(max_length=25)
+
+
+
