@@ -1,4 +1,18 @@
 from django.db import models
+from django.core.exceptions import ObjectDoesNotExist
+
+FALLBACK_CULTURE = "en"
+
+
+class I18NMixin(object):
+    """Mixin for I18N-related methods."""
+    def get_i18n(self, culture, name):
+        """Get i18n data."""
+        try:
+            return getattr(self.i18n.get(culture=culture), name)
+        except ObjectDoesNotExist:
+            return getattr(self.i18n.get(culture=FALLBACK_CULTURE), name)
+
 
 
 class Object(models.Model):
@@ -20,7 +34,7 @@ class Object(models.Model):
         super(Object, self).save()
 
 
-class Term(models.Model):
+class Term(models.Model, I18NMixin):
     """Term model."""
     class Meta:
         db_table = "term"
@@ -35,12 +49,12 @@ class TermI18N(models.Model):
     """Term Object i18n data."""
     class Meta:
         db_table = "term_i18n"
-    id = models.ForeignKey(Term, primary_key=True, db_column="id")
+    id = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
     name = models.CharField(max_length=255, null=True)
     culture = models.CharField(max_length=25)
 
 
-class Taxonomy(models.Model):
+class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
     class Meta:
         db_table = "taxonomy"
@@ -55,7 +69,7 @@ class TaxonomyI18N(models.Model):
     """Taxonomy Object i18n data."""
     class Meta:
         db_table = "taxonomy_i18n"
-    id = models.ForeignKey(Taxonomy, primary_key=True, db_column="id")
+    id = models.ForeignKey(Taxonomy, primary_key=True, db_column="id", related_name="i18n")
     name = models.CharField(max_length=255, null=True)
     note = models.TextField(null=True)
     culture = models.CharField(max_length=25)
@@ -63,7 +77,7 @@ class TaxonomyI18N(models.Model):
 
 
 
-class Repository(models.Model):
+class Repository(models.Model, I18NMixin):
     """Repository object."""
     class Meta:
         db_table = "repository"
@@ -78,7 +92,7 @@ class RepositoryI18N(models.Model):
     """Information Object i18n data."""
     class Meta:
         db_table = "repository_i18n"
-    id = models.ForeignKey(Repository, primary_key=True, db_column="id")
+    id = models.ForeignKey(Repository, primary_key=True, db_column="id", related_name="i18n")
     geocultural_context = models.TextField(null=True) 
     collecting_policies = models.TextField(null=True) 
     buildings = models.TextField(null=True) 
@@ -98,7 +112,7 @@ class RepositoryI18N(models.Model):
 
 
 
-class InformationObject(models.Model):
+class InformationObject(models.Model, I18NMixin):
     """Information Object model."""
     class Meta:
         db_table = "information_object"
@@ -121,7 +135,7 @@ class InformationObjectI18N(models.Model):
     """Information Object i18n data."""
     class Meta:
         db_table = "information_object_i18n"
-    id = models.ForeignKey(InformationObject, primary_key=True, db_column="id")
+    id = models.ForeignKey(InformationObject, primary_key=True, db_column="id", related_name="i18n")
     title = models.CharField(max_length=255, null=True)
     alternate_title = models.CharField(max_length=255, null=True)
     edition = models.CharField(max_length=255, null=True)
@@ -146,7 +160,7 @@ class InformationObjectI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Actor(models.Model):
+class Actor(models.Model, I18NMixin):
     """Actor class."""
     class Meta:
         db_table = "actor"
@@ -166,7 +180,7 @@ class ActorI18N(models.Model):
     """Actor i18n data."""
     class Meta:
         db_table = "actor_i18n"
-    id = models.ForeignKey(Actor, primary_key=True, db_column="id")
+    id = models.ForeignKey(Actor, primary_key=True, db_column="id", related_name="i18n")
     authorized_form_of_name = models.CharField(max_length=255, null=True)
     dates_of_existence = models.CharField(max_length=255, null=True)
     history = models.TextField(null=True)
@@ -182,7 +196,7 @@ class ActorI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Event(models.Model):
+class Event(models.Model, I18NMixin):
     """Event class."""
     class Meta:
         db_table = "event"
@@ -200,7 +214,7 @@ class EventI18N(models.Model):
     """Event i18n data."""
     class Meta:
         db_table = "event_i18n"
-    id = models.ForeignKey(Event, primary_key=True, db_column="id")
+    id = models.ForeignKey(Event, primary_key=True, db_column="id", related_name="i18n")
     date = models.CharField(max_length=255, null=True)
     name = models.CharField(max_length=255, null=True)
     description = models.TextField(null=True)
