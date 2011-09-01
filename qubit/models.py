@@ -102,7 +102,6 @@ class InformationObject(models.Model):
     """Information Object model."""
     class Meta:
         db_table = "information_object"
-
     id = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True)
     oai_local_identifier = models.IntegerField()
@@ -144,6 +143,67 @@ class InformationObjectI18N(models.Model):
     rules = models.TextField(null=True)
     sources = models.TextField(null=True)
     revision_history = models.TextField(null=True)
+    culture = models.CharField(max_length=25)
+
+
+class Actor(models.Model):
+    """Actor class."""
+    class Meta:
+        db_table = "actor"
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    corporate_body_identifiers = models.CharField(max_length=255, null=True)
+    entity_type = models.ForeignKey(Term, null=True, related_name="+")
+    description_status = models.ForeignKey(Term, null=True, related_name="+")
+    description_detail = models.ForeignKey(Term, null=True, related_name="+")
+    description_identifier = models.CharField(max_length=255, null=True)
+    source_standard = models.CharField(max_length=255, null=True)
+    parent = models.ForeignKey("Actor", null=True)
+    lft = models.IntegerField()
+    rgt = models.IntegerField()
+    source_culture = models.CharField(max_length=25)    
+
+class ActorI18N(models.Model):
+    """Actor i18n data."""
+    class Meta:
+        db_table = "actor_i18n"
+    id = models.ForeignKey(Actor, primary_key=True, db_column="id")
+    authorized_form_of_name = models.CharField(max_length=255, null=True)
+    dates_of_existence = models.CharField(max_length=255, null=True)
+    history = models.TextField(null=True)
+    places = models.TextField(null=True)
+    legal_status = models.TextField(null=True)
+    functions = models.TextField(null=True)
+    mandates = models.TextField(null=True)
+    internal_structures = models.TextField(null=True)
+    general_context = models.TextField(null=True)
+    institution_responsible_identifier = models.CharField(max_length=255, null=True)
+    rules = models.TextField(null=True)
+    revision_history = models.TextField(null=True)
+    culture = models.CharField(max_length=25)
+
+
+class Event(models.Model):
+    """Event class."""
+    class Meta:
+        db_table = "event"
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    start_date = models.DateField(null=True)
+    start_time = models.TimeField(null=True)
+    end_date = models.DateField(null=True)
+    end_time = models.TimeField(null=True)
+    type = models.ForeignKey(Term, related_name="+")
+    information_object = models.ForeignKey(InformationObject, null=True)
+    actor = models.ForeignKey(Actor, null=True)
+    source_culture = models.CharField(max_length=25)    
+
+class EventI18N(models.Model):
+    """Event i18n data."""
+    class Meta:
+        db_table = "event_i18n"
+    id = models.ForeignKey(Event, primary_key=True, db_column="id")
+    date = models.CharField(max_length=255, null=True)
+    name = models.CharField(max_length=255, null=True)
+    description = models.TextField(null=True)
     culture = models.CharField(max_length=25)
 
 
