@@ -2,3 +2,10 @@
 *.swp
 *.swo
 
+# files used for testing
+__init__.py
+manage.py
+settings.py
+urls.py
+
+
