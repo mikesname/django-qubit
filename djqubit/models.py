@@ -309,3 +309,34 @@ class FunctionI18N(models.Model):
         db_table = "function_i18n"
 
 
+class Property(models.Model, I18NMixin):
+    """Property class."""
+    base = models.ForeignKey(Object, related_name="properties", db_column="object_id")
+    scope = models.CharField(max_length=255, null=True, blank=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(editable=False)
+    updated_at = models.DateTimeField(editable=False)
+    source_culture = models.CharField(max_length=25)
+    serial_number = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "property"
+
+    def save(self):
+        if not self.id:
+            self.created_at = datetime.datetime.now()
+            self.updated_at = datetime.datetime.now()
+        else:
+            self.updated_at = datetime.datetime.now()
+        super(Object, self).save()
+
+
+class PropertyI18N(models.Model):
+    """Propery I18N data."""
+    base = models.ForeignKey(Property, primary_key=True, db_column="id", related_name="i18n")
+    value = models.CharField(max_length=255, null=True, blank=True)
+    culture = models.CharField(max_length=25)
+
+    class Meta:
+        db_table = "property_i18n"
+
