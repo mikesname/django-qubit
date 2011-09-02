@@ -1,16 +1,20 @@
 """
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
-
-Replace this with more appropriate tests for your application.
+DJQubit test suite.
 """
 
 from django.test import TestCase
+import models
+
+class InformationObjectTest(TestCase):
+    fixtures = ["test_fixtures.json"]
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_information_object(self):
+        io = models.InformationObject.objects.get(identifier="Foobar")
+        self.assertEqual(io.class_name, "QubitInformationObject")
 
 
-class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.assertEqual(1 + 1, 2)
