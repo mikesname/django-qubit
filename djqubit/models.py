@@ -340,3 +340,35 @@ class PropertyI18N(models.Model):
     class Meta:
         db_table = "property_i18n"
 
+
+class OtherName(models.Model, I18NMixin):
+    """Other Name class"""
+    base = models.ForeignKey(Object, related_name="other_names", db_column="object_id")
+    type = models.ForeignKey(Term, null=True, related_name="+")
+    created_at = models.DateTimeField(editable=False)
+    updated_at = models.DateTimeField(editable=False)
+    source_culture = models.CharField(max_length=25)
+    serial_number = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "other_name"
+
+    def save(self):
+        if not self.id:
+            self.created_at = datetime.datetime.now()
+            self.updated_at = datetime.datetime.now()
+        else:
+            self.updated_at = datetime.datetime.now()
+        super(Object, self).save()
+
+
+class OtherNameI18N(models.Model):
+    """Other Name I18N data."""
+    base = models.ForeignKey(OtherName, primary_key=True, db_column="id", related_name="i18n")
+    name = models.CharField(max_length=255, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    culture = models.CharField(max_length=25)
+
+    class Meta:
+        db_table = "other_name_i18n"
+
