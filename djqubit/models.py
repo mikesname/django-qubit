@@ -32,7 +32,7 @@ class Object(models.Model):
             self.updated_at = datetime.datetime.now()
         super(Object, self).save()
 
-            
+
 class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
     class Meta:
@@ -42,7 +42,7 @@ class Taxonomy(models.Model, I18NMixin):
     parent = models.ForeignKey("Taxonomy", null=True, related_name="children")
     lft = models.IntegerField()
     rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
+    source_culture = models.CharField(max_length=25)
 
     def __repr__(self):
         name = self.get_i18n(FALLBACK_CULTURE, "name")
@@ -71,7 +71,7 @@ class Term(Object, I18NMixin):
     parent = models.ForeignKey("Term", related_name="children")
     lft = models.IntegerField()
     rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
+    source_culture = models.CharField(max_length=25)
 
     def __repr__(self):
         name = self.get_i18n(FALLBACK_CULTURE, "name")
@@ -89,16 +89,59 @@ class TermI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Repository(models.Model, I18NMixin):
+class Actor(Object, I18NMixin):
+    """Actor class."""
+    class Meta:
+        db_table = "actor"
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    corporate_body_identifiers = models.CharField(max_length=255, null=True)
+    entity_type = models.ForeignKey(Term, null=True, related_name="entity_type")
+    description_status = models.ForeignKey(Term, null=True, related_name="+")
+    description_detail = models.ForeignKey(Term, null=True, related_name="+")
+    description_identifier = models.CharField(max_length=255, null=True)
+    source_standard = models.CharField(max_length=255, null=True)
+    parent = models.ForeignKey("Actor", null=True, related_name="children")
+    lft = models.IntegerField()
+    rgt = models.IntegerField()
+    source_culture = models.CharField(max_length=25)
+
+    def __repr__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "authorized_form_of_name")
+        if name is not None:
+            return "<%s: '%s'>" % (self.class_name, name)
+        return super(Actor, self).__repr__()
+
+
+class ActorI18N(models.Model):
+    """Actor i18n data."""
+    class Meta:
+        db_table = "actor_i18n"
+    base = models.ForeignKey(Actor, primary_key=True, db_column="id", related_name="i18n")
+    authorized_form_of_name = models.CharField(max_length=255, null=True)
+    dates_of_existence = models.CharField(max_length=255, null=True)
+    history = models.TextField(null=True)
+    places = models.TextField(null=True)
+    legal_status = models.TextField(null=True)
+    functions = models.TextField(null=True)
+    mandates = models.TextField(null=True)
+    internal_structures = models.TextField(null=True)
+    general_context = models.TextField(null=True)
+    institution_responsible_identifier = models.CharField(max_length=255, null=True)
+    rules = models.TextField(null=True)
+    revision_history = models.TextField(null=True)
+    culture = models.CharField(max_length=25)
+
+
+class Repository(Actor, I18NMixin):
     """Repository object."""
     class Meta:
         db_table = "repository"
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base_actor = models.OneToOneField(Actor, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True)
-    desc_status = models.ForeignKey(Term, null=True, related_name="+")
-    desc_detail = models.ForeignKey(Term, null=True, related_name="+")
-    desc_identifier = models.CharField(max_length=255, null=True)
-    source_culture = models.CharField(max_length=25)    
+    desc_status = models.ForeignKey(Term, null=True, db_column="desc_status_id", related_name="+")
+    desc_detail = models.ForeignKey(Term, null=True, db_column="desc_detail_id", related_name="+")
+    repository_description_identifier = models.CharField(max_length=255, db_column="desc_identifier", null=True)
+    repository_source_culture = models.CharField(max_length=25, db_column="source_culture")
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.identifier)
@@ -108,22 +151,22 @@ class RepositoryI18N(models.Model):
     """Information Object i18n data."""
     class Meta:
         db_table = "repository_i18n"
-    base = models.ForeignKey(Repository, primary_key=True, db_column="id", related_name="i18n")
-    geocultural_context = models.TextField(null=True) 
-    collecting_policies = models.TextField(null=True) 
-    buildings = models.TextField(null=True) 
-    holdings = models.TextField(null=True) 
-    finding_aids = models.TextField(null=True) 
-    opening_times = models.TextField(null=True) 
-    access_conditions = models.TextField(null=True) 
-    disabled_access = models.TextField(null=True) 
-    research_services = models.TextField(null=True) 
-    reproduction_services = models.TextField(null=True) 
-    public_facilities = models.TextField(null=True) 
-    desc_institution_identifier = models.CharField(max_length=255, null=True) 
-    desc_rules = models.TextField(null=True) 
-    desc_sources = models.TextField(null=True) 
-    desc_revision_history = models.TextField(null=True) 
+    base = models.ForeignKey(Repository, primary_key=True, db_column="id", related_name="repository_i18n")
+    geocultural_context = models.TextField(null=True)
+    collecting_policies = models.TextField(null=True)
+    buildings = models.TextField(null=True)
+    holdings = models.TextField(null=True)
+    finding_aids = models.TextField(null=True)
+    opening_times = models.TextField(null=True)
+    access_conditions = models.TextField(null=True)
+    disabled_access = models.TextField(null=True)
+    research_services = models.TextField(null=True)
+    reproduction_services = models.TextField(null=True)
+    public_facilities = models.TextField(null=True)
+    desc_institution_identifier = models.CharField(max_length=255, null=True)
+    desc_rules = models.TextField(null=True)
+    desc_sources = models.TextField(null=True)
+    desc_revision_history = models.TextField(null=True)
     culture = models.CharField(max_length=25)
 
 
@@ -136,7 +179,7 @@ class InformationObject(Object, I18NMixin):
     oai_local_identifier = models.IntegerField()
     level_of_description = models.ForeignKey(Term, null=True, related_name="+")
     collection_type = models.ForeignKey(Term, null=True, related_name="+")
-    repository = models.ForeignKey(Repository, null=True)
+    repository = models.ForeignKey(Repository, null=True, related_name="information_objects")
     parent = models.ForeignKey("InformationObject", null=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, related_name="+")
     description_detail = models.ForeignKey(Term, null=True, related_name="+")
@@ -144,7 +187,7 @@ class InformationObject(Object, I18NMixin):
     source_standard = models.CharField(max_length=255, null=True)
     lft = models.IntegerField()
     rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
+    source_culture = models.CharField(max_length=25)
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.identifier)
@@ -179,49 +222,6 @@ class InformationObjectI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Actor(Object, I18NMixin):
-    """Actor class."""
-    class Meta:
-        db_table = "actor"
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
-    corporate_body_identifiers = models.CharField(max_length=255, null=True)
-    entity_type = models.ForeignKey(Term, null=True, related_name="+")
-    description_status = models.ForeignKey(Term, null=True, related_name="+")
-    description_detail = models.ForeignKey(Term, null=True, related_name="+")
-    description_identifier = models.CharField(max_length=255, null=True)
-    source_standard = models.CharField(max_length=255, null=True)
-    parent = models.ForeignKey("Actor", null=True, related_name="children")
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
-
-    def __repr__(self):
-        name = self.get_i18n(FALLBACK_CULTURE, "authorised_form_of_name")
-        if name is not None:            
-            return "<%s: '%s'>" % (self.class_name, name)
-        return super(Actor, self).__repr__()
-        
-
-class ActorI18N(models.Model):
-    """Actor i18n data."""
-    class Meta:
-        db_table = "actor_i18n"
-    base = models.ForeignKey(Actor, primary_key=True, db_column="id", related_name="i18n")
-    authorized_form_of_name = models.CharField(max_length=255, null=True)
-    dates_of_existence = models.CharField(max_length=255, null=True)
-    history = models.TextField(null=True)
-    places = models.TextField(null=True)
-    legal_status = models.TextField(null=True)
-    functions = models.TextField(null=True)
-    mandates = models.TextField(null=True)
-    internal_structures = models.TextField(null=True)
-    general_context = models.TextField(null=True)
-    institution_responsible_identifier = models.CharField(max_length=255, null=True)
-    rules = models.TextField(null=True)
-    revision_history = models.TextField(null=True)
-    culture = models.CharField(max_length=25)
-
-
 class Event(Object, I18NMixin):
     """Event class."""
     class Meta:
@@ -231,8 +231,8 @@ class Event(Object, I18NMixin):
     start_time = models.TimeField(null=True)
     end_date = models.DateField(null=True)
     end_time = models.TimeField(null=True)
-    type = models.ForeignKey(Term, related_name="+")
-    information_object = models.ForeignKey(InformationObject, null=True, related_name="object")
+    type = models.ForeignKey(Term, related_name="type")
+    information_object = models.ForeignKey(InformationObject, null=True, related_name="events")
     actor = models.ForeignKey(Actor, null=True, related_name="actor_object")
     source_culture = models.CharField(max_length=25)
 
@@ -261,13 +261,13 @@ class Function(Object, I18NMixin):
     base = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
     parent = models.ForeignKey("Function", null=True, related_name="children")
-    description_status = models.ForeignKey(Term, null=True, related_name="+")
-    description_detail = models.ForeignKey(Term, null=True, related_name="+")
+    description_status = models.ForeignKey(Term, null=True, related_name="function_statuses")
+    description_detail = models.ForeignKey(Term, null=True, related_name="function_details")
     description_identifier = models.CharField(max_length=255, null=True)
     source_standard = models.CharField(max_length=255, null=True)
     lft = models.IntegerField()
     rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
+    source_culture = models.CharField(max_length=25)
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.description_identifier)
