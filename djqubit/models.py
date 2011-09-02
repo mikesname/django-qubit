@@ -18,7 +18,6 @@ class Object(models.Model):
     """Object model."""
     class Meta:
         db_table = "object"
-
     object_id = models.AutoField(primary_key=True, db_column="id")
     class_name = models.CharField(max_length=255)
     serial_number = models.IntegerField(default=0)
@@ -38,7 +37,7 @@ class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
     class Meta:
         db_table = "taxonomy"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     usage = models.CharField(max_length=255, null=True)
     parent = models.ForeignKey("Taxonomy", null=True, related_name="children")
     lft = models.IntegerField()
@@ -56,7 +55,7 @@ class TaxonomyI18N(models.Model):
     """Taxonomy Object i18n data."""
     class Meta:
         db_table = "taxonomy_i18n"
-    id = models.ForeignKey(Taxonomy, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Taxonomy, primary_key=True, db_column="id", related_name="i18n")
     name = models.CharField(max_length=255, null=True)
     note = models.TextField(null=True)
     culture = models.CharField(max_length=25)
@@ -66,7 +65,7 @@ class Term(Object, I18NMixin):
     """Term model."""
     class Meta:
         db_table = "term"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     taxonomy = models.ForeignKey(Taxonomy, related_name="terms")
     code = models.CharField(max_length=255)
     parent = models.ForeignKey("Term", related_name="children")
@@ -85,7 +84,7 @@ class TermI18N(models.Model):
     """Term Object i18n data."""
     class Meta:
         db_table = "term_i18n"
-    id = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
     name = models.CharField(max_length=255, null=True)
     culture = models.CharField(max_length=25)
 
@@ -94,7 +93,7 @@ class Repository(models.Model, I18NMixin):
     """Repository object."""
     class Meta:
         db_table = "repository"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True)
     desc_status = models.ForeignKey(Term, null=True, related_name="+")
     desc_detail = models.ForeignKey(Term, null=True, related_name="+")
@@ -109,7 +108,7 @@ class RepositoryI18N(models.Model):
     """Information Object i18n data."""
     class Meta:
         db_table = "repository_i18n"
-    id = models.ForeignKey(Repository, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Repository, primary_key=True, db_column="id", related_name="i18n")
     geocultural_context = models.TextField(null=True) 
     collecting_policies = models.TextField(null=True) 
     buildings = models.TextField(null=True) 
@@ -132,7 +131,7 @@ class InformationObject(Object, I18NMixin):
     """Information Object model."""
     class Meta:
         db_table = "information_object"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True)
     oai_local_identifier = models.IntegerField()
     level_of_description = models.ForeignKey(Term, null=True, related_name="+")
@@ -155,7 +154,7 @@ class InformationObjectI18N(models.Model):
     """Information Object i18n data."""
     class Meta:
         db_table = "information_object_i18n"
-    id = models.ForeignKey(InformationObject, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(InformationObject, primary_key=True, db_column="id", related_name="i18n")
     title = models.CharField(max_length=255, null=True)
     alternate_title = models.CharField(max_length=255, null=True)
     edition = models.CharField(max_length=255, null=True)
@@ -184,7 +183,7 @@ class Actor(Object, I18NMixin):
     """Actor class."""
     class Meta:
         db_table = "actor"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     corporate_body_identifiers = models.CharField(max_length=255, null=True)
     entity_type = models.ForeignKey(Term, null=True, related_name="+")
     description_status = models.ForeignKey(Term, null=True, related_name="+")
@@ -207,7 +206,7 @@ class ActorI18N(models.Model):
     """Actor i18n data."""
     class Meta:
         db_table = "actor_i18n"
-    id = models.ForeignKey(Actor, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Actor, primary_key=True, db_column="id", related_name="i18n")
     authorized_form_of_name = models.CharField(max_length=255, null=True)
     dates_of_existence = models.CharField(max_length=255, null=True)
     history = models.TextField(null=True)
@@ -227,7 +226,7 @@ class Event(Object, I18NMixin):
     """Event class."""
     class Meta:
         db_table = "event"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     start_date = models.DateField(null=True)
     start_time = models.TimeField(null=True)
     end_date = models.DateField(null=True)
@@ -248,7 +247,7 @@ class EventI18N(models.Model):
     """Event i18n data."""
     class Meta:
         db_table = "event_i18n"
-    id = models.ForeignKey(Event, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Event, primary_key=True, db_column="id", related_name="i18n")
     date = models.CharField(max_length=255, null=True)
     name = models.CharField(max_length=255, null=True)
     description = models.TextField(null=True)
@@ -259,7 +258,7 @@ class Function(Object, I18NMixin):
     """Function class."""
     class Meta:
         db_table = "function"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    base = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
     parent = models.ForeignKey("Function", null=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, related_name="+")
@@ -278,7 +277,7 @@ class FunctionI18N(models.Model):
     """Function i18n data."""
     class Meta:
         db_table = "function_i18n"
-    id = models.ForeignKey(Function, primary_key=True, db_column="id", related_name="i18n")
+    base = models.ForeignKey(Function, primary_key=True, db_column="id", related_name="i18n")
     authorized_form_of_name = models.CharField(max_length=255, null=True)
     classification = models.CharField(max_length=255, null=True)
     dates = models.CharField(max_length=255, null=True)
