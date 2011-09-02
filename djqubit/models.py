@@ -14,12 +14,12 @@ class I18NMixin(object):
             return getattr(self.i18n.get(culture=FALLBACK_CULTURE), name)
 
 
-
 class Object(models.Model):
     """Object model."""
     class Meta:
         db_table = "object"
 
+    object_id = models.AutoField(primary_key=True, db_column="id")
     class_name = models.CharField(max_length=255)
     serial_number = models.IntegerField(default=0)
     created_at = models.DateTimeField(editable=False)
@@ -33,27 +33,7 @@ class Object(models.Model):
             self.updated_at = datetime.datetime.now()
         super(Object, self).save()
 
-
-class Term(models.Model, I18NMixin):
-    """Term model."""
-    class Meta:
-        db_table = "term"
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
-    code = models.CharField(max_length=255)
-    parent = models.ForeignKey("Term", related_name="children")
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
-    source_culture = models.CharField(max_length=25)    
-
-class TermI18N(models.Model):
-    """Term Object i18n data."""
-    class Meta:
-        db_table = "term_i18n"
-    id = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
-    name = models.CharField(max_length=255, null=True)
-    culture = models.CharField(max_length=25)
-
-
+            
 class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
     class Meta:
@@ -65,6 +45,13 @@ class Taxonomy(models.Model, I18NMixin):
     rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)    
 
+    def __repr__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is not None:
+            return "<%s: '%s'>" % (self.__class__.__name__, name)
+        return super(Term, self).__repr__()
+
+
 class TaxonomyI18N(models.Model):
     """Taxonomy Object i18n data."""
     class Meta:
@@ -75,6 +62,32 @@ class TaxonomyI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
+class Term(Object, I18NMixin):
+    """Term model."""
+    class Meta:
+        db_table = "term"
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    taxonomy = models.ForeignKey(Taxonomy, related_name="terms")
+    code = models.CharField(max_length=255)
+    parent = models.ForeignKey("Term", related_name="children")
+    lft = models.IntegerField()
+    rgt = models.IntegerField()
+    source_culture = models.CharField(max_length=25)    
+
+    def __repr__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is not None:
+            return "<%s: '%s'>" % (self.__class__.__name__, name)
+        return super(Term, self).__repr__()
+
+
+class TermI18N(models.Model):
+    """Term Object i18n data."""
+    class Meta:
+        db_table = "term_i18n"
+    id = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
+    name = models.CharField(max_length=255, null=True)
+    culture = models.CharField(max_length=25)
 
 
 class Repository(models.Model, I18NMixin):
@@ -87,6 +100,10 @@ class Repository(models.Model, I18NMixin):
     desc_detail = models.ForeignKey(Term, null=True, related_name="+")
     desc_identifier = models.CharField(max_length=255, null=True)
     source_culture = models.CharField(max_length=25)    
+
+    def __repr__(self):
+        return "<%s: '%s'>" % (self.class_name, self.identifier)
+
 
 class RepositoryI18N(models.Model):
     """Information Object i18n data."""
@@ -111,18 +128,17 @@ class RepositoryI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-
-class InformationObject(models.Model, I18NMixin):
+class InformationObject(Object, I18NMixin):
     """Information Object model."""
     class Meta:
         db_table = "information_object"
     id = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True)
     oai_local_identifier = models.IntegerField()
-    level_of_description = models.ForeignKey(Term, null=True)
+    level_of_description = models.ForeignKey(Term, null=True, related_name="+")
     collection_type = models.ForeignKey(Term, null=True, related_name="+")
     repository = models.ForeignKey(Repository, null=True)
-    parent = models.ForeignKey("InformationObject", null=True)
+    parent = models.ForeignKey("InformationObject", null=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, related_name="+")
     description_detail = models.ForeignKey(Term, null=True, related_name="+")
     description_identifier = models.CharField(max_length=255, null=True)
@@ -130,6 +146,10 @@ class InformationObject(models.Model, I18NMixin):
     lft = models.IntegerField()
     rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)    
+
+    def __repr__(self):
+        return "<%s: '%s'>" % (self.class_name, self.identifier)
+
 
 class InformationObjectI18N(models.Model):
     """Information Object i18n data."""
@@ -160,7 +180,7 @@ class InformationObjectI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Actor(models.Model, I18NMixin):
+class Actor(Object, I18NMixin):
     """Actor class."""
     class Meta:
         db_table = "actor"
@@ -171,10 +191,17 @@ class Actor(models.Model, I18NMixin):
     description_detail = models.ForeignKey(Term, null=True, related_name="+")
     description_identifier = models.CharField(max_length=255, null=True)
     source_standard = models.CharField(max_length=255, null=True)
-    parent = models.ForeignKey("Actor", null=True)
+    parent = models.ForeignKey("Actor", null=True, related_name="children")
     lft = models.IntegerField()
     rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)    
+
+    def __repr__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "authorised_form_of_name")
+        if name is not None:            
+            return "<%s: '%s'>" % (self.class_name, name)
+        return super(Actor, self).__repr__()
+        
 
 class ActorI18N(models.Model):
     """Actor i18n data."""
@@ -196,7 +223,7 @@ class ActorI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Event(models.Model, I18NMixin):
+class Event(Object, I18NMixin):
     """Event class."""
     class Meta:
         db_table = "event"
@@ -206,9 +233,16 @@ class Event(models.Model, I18NMixin):
     end_date = models.DateField(null=True)
     end_time = models.TimeField(null=True)
     type = models.ForeignKey(Term, related_name="+")
-    information_object = models.ForeignKey(InformationObject, null=True)
-    actor = models.ForeignKey(Actor, null=True)
-    source_culture = models.CharField(max_length=25)    
+    information_object = models.ForeignKey(InformationObject, null=True, related_name="object")
+    actor = models.ForeignKey(Actor, null=True, related_name="actor_object")
+    source_culture = models.CharField(max_length=25)
+
+    def __repr__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is not None:
+            return "<%s: '%s'>" % (self.class_name, name)
+        return super(Event, self).__repr__()
+
 
 class EventI18N(models.Model):
     """Event i18n data."""
@@ -221,13 +255,13 @@ class EventI18N(models.Model):
     culture = models.CharField(max_length=25)
 
 
-class Function(models.Model, I18NMixin):
+class Function(Object, I18NMixin):
     """Function class."""
     class Meta:
         db_table = "function"
     id = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
-    parent = models.ForeignKey(Actor, null=True)
+    parent = models.ForeignKey("Function", null=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, related_name="+")
     description_detail = models.ForeignKey(Term, null=True, related_name="+")
     description_identifier = models.CharField(max_length=255, null=True)
@@ -235,6 +269,10 @@ class Function(models.Model, I18NMixin):
     lft = models.IntegerField()
     rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)    
+
+    def __repr__(self):
+        return "<%s: '%s'>" % (self.class_name, self.description_identifier)
+
 
 class FunctionI18N(models.Model):
     """Function i18n data."""
