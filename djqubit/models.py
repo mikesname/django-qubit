@@ -33,6 +33,9 @@ class Object(models.Model):
             self.updated_at = datetime.datetime.now()
         super(Object, self).save()
 
+    def __unicode__(self):
+        return "%s: %d" % (self.class_name, self.pk)
+
 
 class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
@@ -51,6 +54,13 @@ class Taxonomy(models.Model, I18NMixin):
         if name is not None:
             return "<%s: '%s'>" % (self.__class__.__name__, name)
         return super(Term, self).__repr__()
+
+    def __unicode__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is None:
+            return "Taxonomy: %d" % self.pk
+        return name
+
 
 
 class TaxonomyI18N(models.Model):
@@ -83,6 +93,11 @@ class Term(Object, I18NMixin):
             return "<%s: '%s'>" % (self.__class__.__name__, name)
         return super(Term, self).__repr__()
 
+    def __unicode__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is None:
+            name = "<Null>"
+        return name
 
 class TermI18N(models.Model):
     """Term Object i18n data."""
@@ -101,9 +116,18 @@ class Actor(Object, I18NMixin):
     """Actor class."""
     base = models.OneToOneField(Object, primary_key=True, db_column="id")
     corporate_body_identifiers = models.CharField(max_length=255, null=True, blank=True)
-    entity_type = models.ForeignKey(Term, null=True, related_name="entity_type")
-    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+")
-    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+")
+    entity_type = models.ForeignKey(Term, null=True, related_name="entity_type",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Actor Entity Types"))
+    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Publication Status"))
+    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Description Detail Levels"))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
     parent = models.ForeignKey("Actor", null=True, blank=True, related_name="children")
@@ -119,6 +143,12 @@ class Actor(Object, I18NMixin):
         if name is not None:
             return "<%s: '%s'>" % (self.class_name, name)
         return super(Actor, self).__repr__()
+
+    def __unicode__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "authorized_form_of_name")
+        if name is None:
+            return "Actor: %d" % self.pk
+        return name
 
 
 class ActorI18N(models.Model):
@@ -146,8 +176,14 @@ class Repository(Actor, I18NMixin):
     """Repository object."""
     base_actor = models.OneToOneField(Actor, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True, blank=True)
-    desc_status = models.ForeignKey(Term, null=True, blank=True, db_column="desc_status_id", related_name="+")
-    desc_detail = models.ForeignKey(Term, null=True, blank=True, db_column="desc_detail_id", related_name="+")
+    desc_status = models.ForeignKey(Term, null=True, blank=True, db_column="desc_status_id", related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Publication Status"))
+    desc_detail = models.ForeignKey(Term, null=True, blank=True, db_column="desc_detail_id", related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Description Detail Levels"))
     repository_description_identifier = models.CharField(max_length=255, db_column="desc_identifier", null=True, blank=True)
     repository_source_culture = models.CharField(max_length=25, db_column="source_culture")
 
@@ -156,6 +192,12 @@ class Repository(Actor, I18NMixin):
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.identifier)
+
+    def __unicode__(self):
+        name = self.identifier
+        if name is None:
+            name = "Repository: %d" % self.pk
+        return name
 
 
 class RepositoryI18N(models.Model):
@@ -187,12 +229,24 @@ class InformationObject(Object, I18NMixin):
     base = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True, blank=True)
     oai_local_identifier = models.IntegerField()
-    level_of_description = models.ForeignKey(Term, null=True, blank=True, related_name="+")
-    collection_type = models.ForeignKey(Term, null=True, blank=True, related_name="+")
+    level_of_description = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Levels of description"))
+    collection_type = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Collection Types"))
     repository = models.ForeignKey(Repository, null=True, blank=True, related_name="information_objects")
     parent = models.ForeignKey("InformationObject", null=True, blank=True, related_name="children")
-    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+")
-    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+")
+    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Publication Status"))
+    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Description Detail Levels"))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
     lft = models.IntegerField()
@@ -204,6 +258,12 @@ class InformationObject(Object, I18NMixin):
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.identifier)
+
+    def __unicode__(self):
+        name = self.identifier
+        if name is None:
+            name = "Information object: %d" % self.pk
+        return name
 
 
 class InformationObjectI18N(models.Model):
@@ -257,6 +317,12 @@ class Event(Object, I18NMixin):
             return "<%s: '%s'>" % (self.class_name, name)
         return super(Event, self).__repr__()
 
+    def __unicode__(self):
+        name = self.get_i18n(FALLBACK_CULTURE, "name")
+        if name is None:
+            return "Event: %d" % self.pk
+        return name
+
 
 class EventI18N(models.Model):
     """Event i18n data."""
@@ -275,8 +341,14 @@ class Function(Object, I18NMixin):
     base = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
     parent = models.ForeignKey("Function", null=True, blank=True, related_name="children")
-    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+")
-    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+")
+    description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Publication Status"))
+    description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(
+                taxonomy__i18n__culture=FALLBACK_CULTURE,
+                taxonomy__i18n__name="Description Detail Levels"))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
     lft = models.IntegerField(null=True, blank=True)
