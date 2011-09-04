@@ -6,7 +6,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     # Examples:
-    # url(r'^$', 'ehridata.views.home', name='home'),
+    url(r'^', include(admin.site.urls)),
     # url(r'^ehridata/', include('ehridata.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
