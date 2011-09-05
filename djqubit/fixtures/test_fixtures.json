@@ -13904,10 +13904,10 @@
     "fields": {
       "description_status": 178, 
       "source_culture": "en", 
-      "rgt": null, 
+      "rgt": 2, 
       "parent": null, 
       "source_standard": null, 
-      "lft": null, 
+      "lft": 1, 
       "description_detail": 181, 
       "description_identifier": "somethingCoolThatHappens", 
       "type": 271

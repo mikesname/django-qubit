@@ -5,6 +5,7 @@ DjQubit Models.
 import datetime
 
 from django.db import models
+from django.db.models import F, Max
 from django.core.exceptions import ObjectDoesNotExist
 
 FALLBACK_CULTURE = "en"
@@ -32,24 +33,97 @@ class Object(models.Model):
         db_table = "object"
 
     def save(self):
-        if not self.id:
+        if not self.object_id:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
+        if not self.class_name:
+            self.class_name = "Qubit%s" % self.__class__.__name__
         super(Object, self).save()
 
     def __unicode__(self):
         return "%s: %d" % (self.class_name, self.pk)
 
 
-class Taxonomy(models.Model, I18NMixin):
-    """Taxonomy model."""
+class NestedObject(Object):
+    """
+    Base class for classes with lft/rgt heirarchy fields.  These creates a
+    tree structure which allows for optimised traversal, as opposed to
+    crawling the heirarchy via the database.
+    """
     id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    parent = models.ForeignKey("self", null=True, blank=True, related_name="children")
+    lft = models.PositiveIntegerField()
+    rgt = models.PositiveIntegerField()
+
+    class Meta:
+        abstract = True
+        ordering = ["-lft"]
+
+    def update_nested_set(self):
+        """Update nested tree values for this model."""
+        delta = 2
+        shift = 0
+        if self.lft and self.rgt:
+            delta = self.rgt - self.lft + 1
+        cls = self.__class__
+        if self.parent is None:
+            maxrgt = cls.objects.aggregate(Max("rgt"))["rgt__max"]
+            if not self.lft or not self.rgt:
+                self.lft = maxrgt + 1
+                self.rgt = maxrgt + 2
+                return
+            shift = maxrgt + 1 - self.lft
+        else:
+            cls.objects.filter(lft__gte=self.parent.rgt).update(lft=F('lft') + delta)
+            cls.objects.filter(rgt__gte=self.parent.rgt).update(rgt=F('rgt') + delta)
+            if not self.lft or not self.rgt:
+                self.lft = self.parent.rgt
+                self.rgt = self.parent.rgt + 1
+                self.parent.rgt += 2
+                return
+            if self.lft > self.parent.rgt:
+                self.lft += delta
+                self.rgt += delta
+                shift = self.parent.rgt - self.lft
+        cls.objects.filter(lft__gte=self.lft, rgt__lte=self.rgt)\
+                .update(lft=F('lft') + shift, rgt=F('rgt') + shift)
+        self.delete_nested_set()
+        if shift > 0:
+            self.lft -= delta
+            self.rgt -= delta
+        self.lft += shift
+        self.rgt += shift
+
+    def delete_nested_set(self):
+        """Delete nested tree values for this model."""
+        delta = self.rgt - self.lft + 1
+        cls = self.__class__
+        cls.objects.filter(lft__gte=self.rgt).update(lft=F('lft') - delta)
+        cls.objects.filter(rgt__gte=self.rgt).update(rgt=F('rgt') - delta)
+        return
+
+    def save(self, *args, **kwargs):
+        """Update tree-structure on when created or when parent has changed."""
+        if self.pk is None: 
+           self.update_nested_set()
+        else:
+            dbself = self.__class__.objects.get(pk=self.pk)
+            if dbself.parent != self.parent:
+                self.update_nested_set()
+        super(NestedObject, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Update tree structure on save."""
+        self.delete_nested_set()
+        super(NestedObject, self).delete(*args, **kwargs)
+        
+
+
+class Taxonomy(NestedObject, I18NMixin):
+    """Taxonomy model."""
     usage = models.CharField(max_length=255, null=True, blank=True)
-    parent = models.ForeignKey("Taxonomy", null=True, blank=True, related_name="children")
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)
 
     # Qubit primary keys are hard-coded for these items
@@ -112,14 +186,10 @@ class TaxonomyI18N(models.Model):
         db_table = "taxonomy_i18n"
 
 
-class Term(Object, I18NMixin):
+class Term(NestedObject, I18NMixin):
     """Term model."""
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     taxonomy = models.ForeignKey(Taxonomy, related_name="terms")
     code = models.CharField(max_length=255, null=True, blank=True)
-    parent = models.ForeignKey("Term", null=True, blank=True, related_name="children")
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)
 
     # ROOT term id
@@ -245,9 +315,8 @@ class TermI18N(models.Model):
         return "<%s: '%s'>" % (self.__class__.__name__, self.culture)
 
 
-class Actor(Object, I18NMixin):
+class Actor(NestedObject, I18NMixin):
     """Actor class."""
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     corporate_body_identifiers = models.CharField(max_length=255, null=True, blank=True)
     entity_type = models.ForeignKey(Term, null=True, blank=True, related_name="entity_type",
             limit_choices_to=dict(taxonomy=Taxonomy.ACTOR_ENTITY_TYPE_ID))
@@ -257,9 +326,6 @@ class Actor(Object, I18NMixin):
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_DETAIL_LEVEL_ID))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
-    parent = models.ForeignKey("Actor", null=True, blank=True, related_name="children")
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)
 
     class Meta:
@@ -349,29 +415,36 @@ class RepositoryI18N(models.Model):
         db_table = "repository_i18n"
 
 
-class InformationObject(Object, I18NMixin):
+class InformationObject(NestedObject, I18NMixin):
     """Information Object model."""
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True, blank=True)
-    oai_local_identifier = models.IntegerField()
+    oai_local_identifier = models.PositiveIntegerField(unique=True)
     level_of_description = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.LEVEL_OF_DESCRIPTION_ID))
     collection_type = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.COLLECTION_TYPE_ID))
     repository = models.ForeignKey(Repository, null=True, blank=True, related_name="information_objects")
-    parent = models.ForeignKey("InformationObject", null=True, blank=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_STATUS_ID))
     description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_DETAIL_LEVEL_ID))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
-    lft = models.IntegerField()
-    rgt = models.IntegerField()
     source_culture = models.CharField(max_length=25)
 
     class Meta:
-        db_table = "information_object"
+        db_table = "information_object"            
+
+    def save(self, *args, **kwargs):
+        """Update oai_local_identifier on save."""
+        if self.oai_local_identifier is None:
+            self.oai_local_identifier = self._new_oai_local_identifier()
+        super(InformationObject, self).save(*args, **kwargs)
+
+    def _new_oai_local_identifier(self):
+        return self.__class__.objects\
+                .aggregate(Max("oai_local_identifier"))\
+                ["oai_local_identifier__max"] + 1
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.class_name, self.identifier)
@@ -453,19 +526,15 @@ class EventI18N(models.Model):
         db_table = "event_i18n"
 
 
-class Function(Object, I18NMixin):
+class Function(NestedObject, I18NMixin):
     """Function class."""
-    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
-    parent = models.ForeignKey("Function", null=True, blank=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_STATUS_ID))
     description_detail = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_DETAIL_LEVEL_ID))
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
-    lft = models.IntegerField(null=True, blank=True)
-    rgt = models.IntegerField(null=True, blank=True)
     source_culture = models.CharField(max_length=25)
 
     class Meta:
