@@ -3,7 +3,7 @@ information management system developed by Artefactual Systems, built on PHP5 an
 the basis of ICA-Atom, and other library management tools.
 
 The intended purpose of a Django ORM mapping is to facilitate data import and export from Python-based tools and not
-(at this stage a full CRUD interface.)  It is not affiliated with the creators of the Qubit Toolkit.
+(at this stage) a full CRUD interface.  It is not affiliated with the creators of the Qubit Toolkit.
 
 http://qubit-toolkit.org/
 
