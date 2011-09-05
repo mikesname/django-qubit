@@ -493,7 +493,8 @@ class Event(Object, I18NMixin):
     start_time = models.TimeField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     end_time = models.TimeField(null=True, blank=True)
-    type = models.ForeignKey(Term, related_name="type")
+    type = models.ForeignKey(Term, related_name="+",
+            limit_choices_to=dict(taxonomy=Taxonomy.EVENT_TYPE_ID))
     information_object = models.ForeignKey(InformationObject, null=True, related_name="events")
     actor = models.ForeignKey(Actor, null=True, related_name="actor_object")
     source_culture = models.CharField(max_length=25)
