@@ -1,3 +1,9 @@
+"""
+DjQubit Models.
+"""
+
+import datetime
+
 from django.db import models
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -39,7 +45,7 @@ class Object(models.Model):
 
 class Taxonomy(models.Model, I18NMixin):
     """Taxonomy model."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     usage = models.CharField(max_length=255, null=True, blank=True)
     parent = models.ForeignKey("Taxonomy", null=True, blank=True, related_name="children")
     lft = models.IntegerField()
@@ -108,7 +114,7 @@ class TaxonomyI18N(models.Model):
 
 class Term(Object, I18NMixin):
     """Term model."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     taxonomy = models.ForeignKey(Taxonomy, related_name="terms")
     code = models.CharField(max_length=255, null=True, blank=True)
     parent = models.ForeignKey("Term", null=True, blank=True, related_name="children")
@@ -241,9 +247,9 @@ class TermI18N(models.Model):
 
 class Actor(Object, I18NMixin):
     """Actor class."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     corporate_body_identifiers = models.CharField(max_length=255, null=True, blank=True)
-    entity_type = models.ForeignKey(Term, null=True, related_name="entity_type",
+    entity_type = models.ForeignKey(Term, null=True, blank=True, related_name="entity_type",
             limit_choices_to=dict(taxonomy=Taxonomy.ACTOR_ENTITY_TYPE_ID))
     description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.DESCRIPTION_STATUS_ID))
@@ -345,7 +351,7 @@ class RepositoryI18N(models.Model):
 
 class InformationObject(Object, I18NMixin):
     """Information Object model."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True, blank=True)
     oai_local_identifier = models.IntegerField()
     level_of_description = models.ForeignKey(Term, null=True, blank=True, related_name="+",
@@ -409,7 +415,7 @@ class InformationObjectI18N(models.Model):
 
 class Event(Object, I18NMixin):
     """Event class."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     start_date = models.DateField(null=True, blank=True)
     start_time = models.TimeField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -449,7 +455,7 @@ class EventI18N(models.Model):
 
 class Function(Object, I18NMixin):
     """Function class."""
-    base = models.OneToOneField(Object, primary_key=True, db_column="id")
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
     type = models.ForeignKey(Term, null=True, related_name="+")
     parent = models.ForeignKey("Function", null=True, blank=True, related_name="children")
     description_status = models.ForeignKey(Term, null=True, blank=True, related_name="+",
@@ -490,7 +496,7 @@ class FunctionI18N(models.Model):
 
 class Property(models.Model, I18NMixin):
     """Property class."""
-    base = models.ForeignKey(Object, related_name="properties", db_column="object_id")
+    object_id = models.ForeignKey(Object, related_name="properties", db_column="object_id")
     scope = models.CharField(max_length=255, null=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(editable=False)
@@ -522,7 +528,7 @@ class PropertyI18N(models.Model):
 
 class OtherName(models.Model, I18NMixin):
     """Other Name class"""
-    base = models.ForeignKey(Object, related_name="other_names", db_column="object_id")
+    object_id = models.ForeignKey(Object, related_name="other_names", db_column="object_id")
     type = models.ForeignKey(Term, null=True, related_name="+")
     created_at = models.DateTimeField(editable=False)
     updated_at = models.DateTimeField(editable=False)
