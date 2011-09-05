@@ -604,7 +604,7 @@ class OtherName(models.Model, I18NMixin):
     source_culture = models.CharField(max_length=25)
     serial_number = models.IntegerField(default=0)
 
-    class Meta:
+    class meta:
         db_table = "other_name"
 
     def save(self):
@@ -613,7 +613,7 @@ class OtherName(models.Model, I18NMixin):
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
-        super(Object, self).save()
+        super(object, self).save()
 
 
 class OtherNameI18N(models.Model):
@@ -625,4 +625,52 @@ class OtherNameI18N(models.Model):
 
     class Meta:
         db_table = "other_name_i18n"
+
+
+class ContactInformation(models.Model, I18NMixin):
+    """Contact object."""
+    actor = models.ForeignKey(Actor, related_name="contacts")
+    primary_contact = models.NullBooleanField(null=True)
+    contact_person = models.CharField(max_length=255, null=True, blank=True)
+    street_address = models.TextField(null=True, blank=True)
+    website = models.CharField(max_length=255, null=True, blank=True)
+    email = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(max_length=255, null=True, blank=True)
+    fax = models.CharField(max_length=255, null=True, blank=True)
+    postal_code = models.CharField(max_length=255, null=True, blank=True)
+    country_code = models.CharField(max_length=255, null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(editable=False)
+    updated_at = models.DateTimeField(editable=False)
+    source_culture = models.CharField(max_length=25)
+    serial_number = models.IntegerField(default=0)
+
+    class meta:
+        db_table = "contact_information"
+
+    def save(self):
+        if not self.id:
+            self.created_at = datetime.datetime.now()
+            self.updated_at = datetime.datetime.now()
+        else:
+            self.updated_at = datetime.datetime.now()
+        super(object, self).save()
+
+class ContactInformationI18N(models.Model):
+    """Contact I18N data."""
+    base = models.ForeignKey(ContactInformation, primary_key=True, db_column="id", related_name="i18n")
+    contact_type = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=255, null=True, blank=True)
+    region = models.CharField(max_length=255, null=True, blank=True)
+    note = models.TextField(null=True, blank=True)
+    culture = models.CharField(max_length=25)
+
+    class Meta:
+        db_table = "contact_information_i18n"
+
+
+
+
+
 
