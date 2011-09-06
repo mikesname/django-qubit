@@ -63,4 +63,27 @@ class InformationObjectTest(TestCase):
         self.assertEqual(maxrgt3, models.InformationObject.objects.count() * 2)
 
 
-        
+    def test_i18n_data_update(self):
+        """
+        I18n data is currently set in a horrid way because we can't
+        instantiate the models (they have not primary key.)  So check
+        setting the the dodgy way works.
+        """
+        io = models.InformationObject.objects.get(identifier="Foobar")
+        updatetitle = "This is a new translated title"
+        io.set_i18n("en", dict(
+            title=updatetitle,
+        ))
+        self.assertEqual(io.get_i18n("en", "title"), updatetitle)
+
+        # FIXME: Inserting i18n data not working for now
+        # IntegrityError: PRIMARY KEY must be unique
+        updatesource = "This should be a new foreign language"
+        io.set_i18n("zx", dict(
+            sources=updatesource,
+        ))
+        self.assertEqual(io.get_i18n("zx", "sources"), updatesource)
+
+
+
+

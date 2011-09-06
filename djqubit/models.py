@@ -4,21 +4,57 @@ DjQubit Models.
 
 import datetime
 
-from django.db import models
+from django.db import models, connections, transaction, router
 from django.db.models import F, Max
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 FALLBACK_CULTURE = "en"
+
+
+class I18NValidationError(ValidationError):
+    pass
+
+
+def dict_cursor(cursor):
+    description = [x[0] for x in cursor.description]
+    for row in cursor:
+        yield dict(zip(description, row))
 
 
 class I18NMixin(object):
     """Mixin for I18N-related methods."""
     def get_i18n(self, culture, name):
         """Get i18n data."""
-        try:
+        try:                                                 
             return getattr(self.i18n.get(culture=culture), name)
         except ObjectDoesNotExist:
-            return getattr(self.i18n.get(culture=FALLBACK_CULTURE), name)
+            return getattr(self.i18n.get(culture=FALLBACK_CULTURE), name)        
+
+    def set_i18n(self, culture, data):
+        """Set i18n data for a model."""
+        if not self.pk:
+            raise I18NValidationError("Cannot set i18n data on an unsaved model")
+
+        fields = self.i18n.model._meta.get_all_field_names()
+
+        # FIXME: This is VERY fragile in it's current state
+        table = self._meta.db_table
+        cursor = connections[router.db_for_read(self.__class__)].cursor()
+        findquery = "SELECT * FROM %s_i18n WHERE id=%%s AND culture=%%s" % self._meta.db_table
+        cursor.execute(findquery, [self.pk, culture])
+        row = cursor.fetchone()
+        args = [kv for kv in data.iteritems() if kv[0] in fields]
+        uquery = None
+        if row is not None:
+            fstr = ", ".join(["%s=%%s" % k[0] for k in args])
+            uquery = "UPDATE %s_i18n SET %s WHERE id=%%s AND culture=%%s" % (table, fstr)
+        else:
+            kstr = ", ".join([a[0] for a in args]) 
+            vstr = ", ".join(['%s' for a in args])
+            uquery = "INSERT INTO %s_i18n (%s,id,culture) VALUES (%s,%%s,%%s)" % (
+                    table, kstr, vstr)
+        cursor.execute(uquery, [a[1] for a in args] + [self.pk, culture])
+        transaction.commit_unless_managed(using=router.db_for_write(self.__class__))
 
 
 class Object(models.Model):
@@ -626,13 +662,13 @@ class Property(models.Model, I18NMixin):
     class Meta:
         db_table = "property"
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
-        super(Object, self).save()
+        super(Property, self).save(*args, **kwargs)
 
 
 class PropertyI18N(models.Model):
@@ -654,16 +690,16 @@ class OtherName(models.Model, I18NMixin):
     source_culture = models.CharField(max_length=25)
     serial_number = models.IntegerField(default=0)
 
-    class meta:
+    class Meta:
         db_table = "other_name"
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
-        super(object, self).save()
+        super(OtherName, self).save(*args, **kwargs)
 
 
 class OtherNameI18N(models.Model):
@@ -699,13 +735,13 @@ class ContactInformation(models.Model, I18NMixin):
     class Meta:
         db_table = "contact_information"
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
-        super(object, self).save()
+        super(ContactInformation, self).save(*args, **kwargs)
 
 
 class ContactInformationI18N(models.Model):
@@ -743,13 +779,13 @@ class Note(models.Model, I18NMixin):
     class Meta:
         db_table = "note"
 
-    def save(self):
+    def save(self, *args, **kwargs):
         if not self.id:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
             self.updated_at = datetime.datetime.now()
-        super(object, self).save()
+        super(Note, self).save(*args, **kwargs)
 
 
     def __unicode__(self):
@@ -764,5 +800,18 @@ class NoteI18N(models.Model):
 
     class Meta:
         db_table = "note_i18n"
+
+
+class Slug(models.Model):
+    """Slug class."""
+    object_id = models.OneToOneField(Object, related_name="slug", db_column="object_id")
+    slug = models.CharField(max_length=255, unique=True)
+    serial_number = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "slug"
+
+    def __unicode__(self):
+        return self.slug
 
 
