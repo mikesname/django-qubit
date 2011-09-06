@@ -106,7 +106,7 @@ class NestedObject(Object):
 
     def save(self, *args, **kwargs):
         """Update tree-structure on when created or when parent has changed."""
-        if self.pk is None: 
+        if self.pk is None:
            self.update_nested_set()
         else:
             dbself = self.__class__.objects.get(pk=self.pk)
@@ -118,7 +118,6 @@ class NestedObject(Object):
         """Update tree structure on save."""
         self.delete_nested_set()
         super(NestedObject, self).delete(*args, **kwargs)
-        
 
 
 class Taxonomy(NestedObject, I18NMixin):
@@ -172,7 +171,6 @@ class Taxonomy(NestedObject, I18NMixin):
         if name is None:
             return "Taxonomy: %d" % self.pk
         return name
-
 
 
 class TaxonomyI18N(models.Model):
@@ -302,6 +300,7 @@ class Term(NestedObject, I18NMixin):
             name = "<Null>"
         return name
 
+
 class TermI18N(models.Model):
     """Term Object i18n data."""
     base = models.ForeignKey(Term, primary_key=True, db_column="id", related_name="i18n")
@@ -313,6 +312,20 @@ class TermI18N(models.Model):
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.__class__.__name__, self.culture)
+
+
+class Relation(Object):
+    """Relationship object."""
+    id = models.OneToOneField(Object, primary_key=True, db_column="id")
+    subject = models.ForeignKey(Object, db_column="subject_id", related_name="relations")
+    object = models.ForeignKey(Object, db_column="object_id", related_name="objects")
+    type = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(taxonomy=Taxonomy.RELATION_TYPE_ID))
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "relation"
 
 
 class Actor(NestedObject, I18NMixin):
@@ -365,7 +378,7 @@ class ActorI18N(models.Model):
         db_table = "actor_i18n"
 
 
-class Repository(Actor, I18NMixin):
+class Repository(Actor):
     """Repository object."""
     base_actor = models.OneToOneField(Actor, primary_key=True, db_column="id")
     identifier = models.CharField(max_length=255, null=True, blank=True)
@@ -415,6 +428,20 @@ class RepositoryI18N(models.Model):
         db_table = "repository_i18n"
 
 
+class User(Actor):
+    """Qubit User class.  Unfortunately we can't seem
+    to reuse the Django auth user class here.
+    NB: Deliberately left blank=True off the fields"""
+    base_actor = models.OneToOneField(Actor, primary_key=True, db_column="id")
+    username = models.CharField(max_length=255, unique=True, null=True)
+    email = models.CharField(max_length=255, null=True)
+    sha1_password = models.CharField(max_length=255, null=True)
+    salt = models.CharField(max_length=255, null=True)
+
+    class Meta:
+        db_table = "user"
+
+
 class InformationObject(NestedObject, I18NMixin):
     """Information Object model."""
     identifier = models.CharField(max_length=255, null=True, blank=True)
@@ -433,7 +460,7 @@ class InformationObject(NestedObject, I18NMixin):
     source_culture = models.CharField(max_length=25)
 
     class Meta:
-        db_table = "information_object"            
+        db_table = "information_object"
 
     def save(self, *args, **kwargs):
         """Update oai_local_identifier on save."""
@@ -564,6 +591,28 @@ class FunctionI18N(models.Model):
         db_table = "function_i18n"
 
 
+class DigitalObject(NestedObject):
+    """Digital object class."""
+    # NB: The schema changes between Qubit 1.1 and 1.2 with regard to
+    # checksum_type.
+    information_object = models.ForeignKey(InformationObject, null=True, blank=True,
+            related_name="digital_objects")
+    usage = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(taxonomy=Taxonomy.DIGITAL_OBJECT_USAGE_ID))
+    mime_type = models.CharField(max_length=255, null=True, blank=True)
+    media_type = models.ForeignKey(Term, null=True, blank=True, related_name="+",
+            limit_choices_to=dict(taxonomy=Taxonomy.MEDIA_TYPE_ID))
+    name = models.CharField(max_length=255, null=True, blank=True)
+    path = models.CharField(max_length=255, null=True, blank=True)
+    sequence = models.PositiveIntegerField(null=True, blank=True)
+    byte_size = models.PositiveIntegerField(null=True, blank=True)
+    checksum = models.CharField(max_length=255, null=True, blank=True)
+    checksum_type = models.ForeignKey(Term, null=True, blank=True, related_name="+")
+
+    class Meta:
+        db_table = "digital_object"
+
+
 class Property(models.Model, I18NMixin):
     """Property class."""
     object_id = models.ForeignKey(Object, related_name="properties", db_column="object_id")
@@ -658,6 +707,7 @@ class ContactInformation(models.Model, I18NMixin):
             self.updated_at = datetime.datetime.now()
         super(object, self).save()
 
+
 class ContactInformationI18N(models.Model):
     """Contact I18N data."""
     base = models.ForeignKey(ContactInformation, primary_key=True, db_column="id", related_name="i18n")
@@ -671,7 +721,48 @@ class ContactInformationI18N(models.Model):
         db_table = "contact_information_i18n"
 
 
+class Note(models.Model, I18NMixin):
+    """Note class"""
+    # FIXME: in Qubit 1.1 QubitNote has nested set behaviour, which was
+    # removed in Qubit 1.2-dev.  We're going to ignore this for now
+    # which avoids making the Note class a NestedObject.  We do need
+    # the columns for compatibility though.
+    object_id = models.ForeignKey(Object, related_name="notes", db_column="object_id")
+    type = models.ForeignKey(Term, null=True, related_name="+",
+            limit_choices_to=dict(taxonomy=Taxonomy.NOTE_TYPE_ID))
+    scope = models.CharField(max_length=255, null=True, blank=True)
+    user = models.ForeignKey(User, null=True)
+    parent = models.ForeignKey("self", null=True, blank=True, related_name="children")
+    lft = models.PositiveIntegerField(default=0)
+    rgt = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(editable=False)
+    updated_at = models.DateTimeField(editable=False)
+    source_culture = models.CharField(max_length=25)
+    serial_number = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "note"
+
+    def save(self):
+        if not self.id:
+            self.created_at = datetime.datetime.now()
+            self.updated_at = datetime.datetime.now()
+        else:
+            self.updated_at = datetime.datetime.now()
+        super(object, self).save()
 
 
+    def __unicode__(self):
+        return "Note: %s" % str(self.created_at)
+
+
+class NoteI18N(models.Model):
+    """Note I18N data."""
+    base = models.ForeignKey(Note, primary_key=True, db_column="id", related_name="i18n")
+    content = models.TextField(null=True, blank=True)
+    culture = models.CharField(max_length=25)
+
+    class Meta:
+        db_table = "note_i18n"
 
 
