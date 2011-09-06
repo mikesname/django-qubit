@@ -647,7 +647,7 @@ class ContactInformation(models.Model, I18NMixin):
     source_culture = models.CharField(max_length=25)
     serial_number = models.IntegerField(default=0)
 
-    class meta:
+    class Meta:
         db_table = "contact_information"
 
     def save(self):
