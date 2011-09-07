@@ -59,7 +59,7 @@ class I18NMixin(object):
 
 class Object(models.Model):
     """Object model."""
-    object_id = models.AutoField(primary_key=True, db_column="id")
+    object = models.AutoField(primary_key=True, db_column="id")
     class_name = models.CharField(max_length=255)
     serial_number = models.IntegerField(default=0)
     created_at = models.DateTimeField(editable=False)
@@ -69,7 +69,7 @@ class Object(models.Model):
         db_table = "object"
 
     def save(self):
-        if not self.object_id:
+        if not self.object:
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
         else:
@@ -218,6 +218,7 @@ class TaxonomyI18N(models.Model):
 
     class Meta:
         db_table = "taxonomy_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Term(NestedObject, I18NMixin):
@@ -345,6 +346,7 @@ class TermI18N(models.Model):
 
     class Meta:
         db_table = "term_i18n"
+        unique_together = (("base", "culture"),)
 
     def __repr__(self):
         return "<%s: '%s'>" % (self.__class__.__name__, self.culture)
@@ -353,8 +355,8 @@ class TermI18N(models.Model):
 class Relation(Object):
     """Relationship object."""
     id = models.OneToOneField(Object, primary_key=True, db_column="id")
-    subject = models.ForeignKey(Object, db_column="subject_id", related_name="relations")
-    object = models.ForeignKey(Object, db_column="object_id", related_name="objects")
+    subject_id = models.ForeignKey(Object, db_column="subject_id", related_name="relations")
+    object_id = models.ForeignKey(Object, db_column="object_id", related_name="objects")
     type = models.ForeignKey(Term, null=True, blank=True, related_name="+",
             limit_choices_to=dict(taxonomy=Taxonomy.RELATION_TYPE_ID))
     start_date = models.DateField(null=True, blank=True)
@@ -376,6 +378,10 @@ class Actor(NestedObject, I18NMixin):
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
     source_culture = models.CharField(max_length=25)
+
+    # ROOT Actor id
+    # FIXME: This is... fragile...?  Just copying Qubit here!!!
+    ROOT_ID = 3
 
     class Meta:
         db_table = "actor"
@@ -412,6 +418,7 @@ class ActorI18N(models.Model):
 
     class Meta:
         db_table = "actor_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Repository(Actor):
@@ -439,6 +446,12 @@ class Repository(Actor):
             name = "Repository: %d" % self.pk
         return name
 
+    def save(self, *args, **kwargs):
+        """Ensure source culture is set."""
+        if not self.repository_source_culture:
+            self.repository_source_culture = self.base_actor.source_culture
+        super(Repository, self).save(*args, **kwargs)
+
 
 class RepositoryI18N(models.Model):
     """Information Object i18n data."""
@@ -462,7 +475,7 @@ class RepositoryI18N(models.Model):
 
     class Meta:
         db_table = "repository_i18n"
-
+        unique_together = (("base", "culture"),)
 
 class User(Actor):
     """Qubit User class.  Unfortunately we can't seem
@@ -494,6 +507,10 @@ class InformationObject(NestedObject, I18NMixin):
     description_identifier = models.CharField(max_length=255, null=True, blank=True)
     source_standard = models.CharField(max_length=255, null=True, blank=True)
     source_culture = models.CharField(max_length=25)
+
+    # ROOT InformationObject id
+    # FIXME: This is... fragile...?  Just copying Qubit here!!!
+    ROOT_ID = 1
 
     class Meta:
         db_table = "information_object"
@@ -547,6 +564,7 @@ class InformationObjectI18N(models.Model):
 
     class Meta:
         db_table = "information_object_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Event(Object, I18NMixin):
@@ -588,6 +606,7 @@ class EventI18N(models.Model):
 
     class Meta:
         db_table = "event_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Function(NestedObject, I18NMixin):
@@ -625,6 +644,7 @@ class FunctionI18N(models.Model):
 
     class Meta:
         db_table = "function_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class DigitalObject(NestedObject):
@@ -679,6 +699,7 @@ class PropertyI18N(models.Model):
 
     class Meta:
         db_table = "property_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class OtherName(models.Model, I18NMixin):
@@ -755,6 +776,7 @@ class ContactInformationI18N(models.Model):
 
     class Meta:
         db_table = "contact_information_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Note(models.Model, I18NMixin):
@@ -800,6 +822,7 @@ class NoteI18N(models.Model):
 
     class Meta:
         db_table = "note_i18n"
+        unique_together = (("base", "culture"),)
 
 
 class Slug(models.Model):
