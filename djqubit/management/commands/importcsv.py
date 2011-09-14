@@ -4,6 +4,7 @@ Import a csv file or files into the database.
 
 import csv
 from optparse import make_option
+import exceptions
 
 from incf.countryutils import data as countrydata
 
@@ -79,7 +80,7 @@ class Command(BaseCommand):
                 self.handle_row(record, reader.line_num, options["lang"], user, status, detail)
                 if options["to"] > 0 and reader.line_num == options["to"]:
                     break
-        except BaseException, err:
+        except exceptions.BaseException, err:
             self.stderr.write("Caught exception: %s, Rolling back imports...\n" % err)
             transaction.rollback()
             raise err
