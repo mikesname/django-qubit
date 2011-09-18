@@ -1,10 +1,28 @@
 """
 Import a csv file or files into the database.
+  fields are:
+    Address
+    City
+    Contact
+    Country        
+    E-mail
+    English Name
+    Extra
+    Fax
+    Origin
+    Original Name
+    Phone
+    Source
+    State
+    Survey 1
+    URL
+
 """
 
 import csv
 from optparse import make_option
 import exceptions
+import phpserialize
 
 from incf.countryutils import data as countrydata
 
@@ -43,6 +61,13 @@ class Command(BaseCommand):
             default=-1,
             help="Import records up to this offset"),
         make_option(
+            "-u",
+            "--user",
+            action="store",
+            dest="user",
+            default="qubit",
+            help="User to own imported records"),
+        make_option(
             "-l",
             "--lang",
             action="store",
@@ -62,7 +87,7 @@ class Command(BaseCommand):
         handle.seek(0)        
         dialect = csv.Sniffer().sniff(sample)
 
-        user = models.User.objects.get(username="mike")
+        user = models.User.objects.get(username=options["user"])
         status = models.Term.objects.get(
                 taxonomy=models.Taxonomy.DESCRIPTION_STATUS_ID,
                 i18n__name__exact="Draft")
@@ -89,23 +114,6 @@ class Command(BaseCommand):
         handle.close()                    
 
     def handle_row(self, rawrecord, index, lang, user, status, detail):
-        # fields are:
-        #   Address
-        #   City
-        #   Contact
-        #   Country        
-        #   E-mail
-        #   English Name
-        #   Extra
-        #   Fax
-        #   Origin
-        #   Original Name
-        #   Phone
-        #   Source
-        #   State
-        #   Survey 1
-        #   URL
-
         record = {}
         for k, v in rawrecord.iteritems():
             if isinstance(v, str):
@@ -191,6 +199,24 @@ class Command(BaseCommand):
                 note="Import from EHRI contact spreadsheet"
         ))
 
+        langprop = models.Property(
+                object_id=repo,
+                name="language",
+                source_culture=lang
+        )
+        langprop.save()
+        langprop.set_i18n(lang, dict(
+            value=phpserialize.dumps([lang])
+        ))
+        scriptprop = models.Property(
+                object_id=repo,
+                name="script",
+                source_culture=lang
+        )
+        scriptprop.save()
+        scriptprop.set_i18n(lang, dict(
+            value=phpserialize.dumps(["Latn"])
+        ))
 
             
 
